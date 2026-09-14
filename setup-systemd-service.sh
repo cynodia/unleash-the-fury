@@ -73,6 +73,8 @@ write_service() {
 [Unit]
 Description=Run the Unleash the Fury startup command
 After=local-fs.target
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service
 
 [Service]
 Type=oneshot
