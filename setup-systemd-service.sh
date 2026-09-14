@@ -4,14 +4,14 @@ set -euo pipefail
 SERVICE_NAME="unleash-the-fury.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}"
 WRAPPER_PATH="/usr/local/bin/unleash-the-fury-startup"
-ENV_PATH="/etc/default/unleash-the-fury"
+COMMAND_PATH="/etc/unleash-the-fury.command"
 
 usage() {
   cat <<'EOF'
 Usage: sudo ./setup-systemd-service.sh '<command to run at startup>'
 
 Installs and enables a oneshot systemd service named unleash-the-fury.service.
-The provided command is stored in /etc/default/unleash-the-fury and executed
+The provided command is stored in /etc/unleash-the-fury.command and executed
 through /usr/local/bin/unleash-the-fury-startup on every boot.
 EOF
 }
@@ -30,7 +30,7 @@ require_systemd() {
   fi
 }
 
-write_env_file() {
+write_command_file() {
   local command_string="$1"
 
   if [[ "${command_string}" == *$'\n'* ]]; then
@@ -38,8 +38,8 @@ write_env_file() {
     exit 1
   fi
 
-  printf 'UNLEASH_THE_FURY_COMMAND=%q\n' "${command_string}" > "${ENV_PATH}"
-  chmod 0644 "${ENV_PATH}"
+  printf '%s\n' "${command_string}" > "${COMMAND_PATH}"
+  chmod 0600 "${COMMAND_PATH}"
 }
 
 write_wrapper() {
@@ -47,22 +47,21 @@ write_wrapper() {
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_PATH="/etc/default/unleash-the-fury"
+COMMAND_PATH="/etc/unleash-the-fury.command"
 
-if [[ ! -r "${ENV_PATH}" ]]; then
-  echo "Missing ${ENV_PATH}" >&2
+if [[ ! -r "${COMMAND_PATH}" ]]; then
+  echo "Missing ${COMMAND_PATH}" >&2
   exit 1
 fi
 
-# shellcheck disable=SC1091
-source "${ENV_PATH}"
+command_string="$(<"${COMMAND_PATH}")"
 
-if [[ -z "${UNLEASH_THE_FURY_COMMAND:-}" ]]; then
-  echo "UNLEASH_THE_FURY_COMMAND is not set in ${ENV_PATH}" >&2
+if [[ -z "${command_string}" ]]; then
+  echo "No startup command found in ${COMMAND_PATH}" >&2
   exit 1
 fi
 
-exec /usr/bin/env bash -c "${UNLEASH_THE_FURY_COMMAND}"
+exec /usr/bin/env bash -c "${command_string}"
 EOF
 
   chmod 0755 "${WRAPPER_PATH}"
@@ -88,7 +87,7 @@ EOF
 enable_service() {
   systemctl daemon-reload
   systemctl enable "${SERVICE_NAME}"
-  systemctl restart "${SERVICE_NAME}"
+  systemctl start "${SERVICE_NAME}"
 }
 
 main() {
@@ -107,7 +106,7 @@ main() {
 
   local command_string="$1"
 
-  write_env_file "${command_string}"
+  write_command_file "${command_string}"
   write_wrapper
   write_service
   enable_service
@@ -115,7 +114,7 @@ main() {
   echo "Installed ${SERVICE_NAME}."
   echo "Command: ${command_string}"
   echo "Service file: ${SERVICE_PATH}"
-  echo "Command file: ${ENV_PATH}"
+  echo "Command file: ${COMMAND_PATH}"
   echo "Wrapper: ${WRAPPER_PATH}"
 }
 
