@@ -87,7 +87,11 @@ enable_service() {
   systemctl daemon-reload
 
   if systemctl is-enabled --quiet "${SERVICE_NAME}" >/dev/null 2>&1; then
-    systemctl restart "${SERVICE_NAME}"
+    if systemctl is-active --quiet "${SERVICE_NAME}"; then
+      systemctl restart "${SERVICE_NAME}"
+    else
+      systemctl start "${SERVICE_NAME}"
+    fi
   else
     systemctl enable --now "${SERVICE_NAME}"
   fi
