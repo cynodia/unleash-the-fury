@@ -134,7 +134,13 @@ main() {
   chmod 0755 "${temp_script}"
 
   if prompt_yes_no "Run fury-rgb-off once now before installing the service? [Y/n]" "Y"; then
-    run_test "${temp_script}"
+    if ! run_test "${temp_script}"; then
+      echo "The test run failed." >&2
+      if ! prompt_yes_no "Install the service anyway? [y/N]" "N"; then
+        echo "Installation cancelled."
+        exit 1
+      fi
+    fi
   elif ! prompt_yes_no "Install the service without a test run? [y/N]" "N"; then
     echo "Installation cancelled."
     exit 1
