@@ -79,29 +79,29 @@ for ADDR in "${RGB_ADDRESSES[@]}"; do
     echo "Turning off RGB at $ADDR"
 
     # Enter configuration mode
-    i2cset -y "$BUS" "$ADDR" 0x08 0x53
+    i2cset -y "$BUS" "$ADDR" 0x08 0x53 b
     sleep 0.02
 
     # Static mode
-    i2cset -y "$BUS" "$ADDR" 0x09 0x00
+    i2cset -y "$BUS" "$ADDR" 0x09 0x00 b
     sleep 0.02
 
     # RGB = black
-    i2cset -y "$BUS" "$ADDR" 0x31 0x00
+    i2cset -y "$BUS" "$ADDR" 0x31 0x00 b
     sleep 0.02
 
-    i2cset -y "$BUS" "$ADDR" 0x32 0x00
+    i2cset -y "$BUS" "$ADDR" 0x32 0x00 b
     sleep 0.02
 
-    i2cset -y "$BUS" "$ADDR" 0x33 0x00
+    i2cset -y "$BUS" "$ADDR" 0x33 0x00 b
     sleep 0.02
 
     # Minimum brightness / LEDs off
-    i2cset -y "$BUS" "$ADDR" 0x20 0x64
+    i2cset -y "$BUS" "$ADDR" 0x20 0x64 b
     sleep 0.02
 
     # Apply / leave configuration mode
-    i2cset -y "$BUS" "$ADDR" 0x08 0x44
+    i2cset -y "$BUS" "$ADDR" 0x08 0x44 b
     sleep 0.02
 done
 
