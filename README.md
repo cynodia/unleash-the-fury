@@ -11,6 +11,8 @@ The `fury-rgb-off` script:
 - maps detected Fury RGB controller addresses (`0x60`-`0x67`)
 - writes the values needed to switch the LEDs to black/off
 
+The current auto-detection logic is Intel-I801-oriented. If your system uses a different SMBus controller, set `BUS` manually.
+
 ## Requirements
 
 - Linux
