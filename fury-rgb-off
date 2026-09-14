@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
-# Can be overridden, e.g.:
-#   BUS=4 ./fury-rgb-off
 BUS="${BUS:-}"
-SYSFS_I2C_DEVICES_ROOT="${SYSFS_I2C_DEVICES_ROOT:-/sys/bus/i2c/devices}"
 
 if ! command -v i2cdetect >/dev/null 2>&1 || ! command -v i2cset >/dev/null 2>&1; then
-    echo "ERROR: i2c-tools is required (missing i2cdetect and/or i2cset)." >&2
+    echo "ERROR: i2c-tools is required." >&2
     exit 1
 fi
 
-# Auto-detect SMBus if BUS wasn't explicitly supplied
+#
+# Auto-detect Intel I801 SMBus
+#
 if [[ -z "$BUS" ]]; then
     mapfile -t MATCHING_BUSES < <(
         i2cdetect -l |
@@ -24,64 +23,72 @@ if [[ -z "$BUS" ]]; then
     if [[ ${#MATCHING_BUSES[@]} -eq 1 ]]; then
         BUS="${MATCHING_BUSES[0]}"
     elif [[ ${#MATCHING_BUSES[@]} -gt 1 ]]; then
-        echo "ERROR: Found multiple matching SMBus I801 adapters." >&2
-        echo "Set BUS manually, for example:" >&2
-        echo "  BUS=4 $0" >&2
+        echo "ERROR: Found multiple SMBus I801 adapters." >&2
         exit 1
     fi
 fi
 
 if [[ -z "$BUS" ]]; then
-    echo "ERROR: Could not find a matching SMBus I801 adapter." >&2
-    echo "Set BUS manually, for example:" >&2
-    echo "  BUS=4 $0" >&2
+    echo "ERROR: Could not find SMBus I801 adapter." >&2
+    i2cdetect -l
     exit 1
 fi
 
 echo "Using i2c-$BUS"
+echo "Scanning i2c-$BUS..."
 
-device_path_exists() {
-    local device
-    printf -v device '%s/%s-%04x' "$SYSFS_I2C_DEVICES_ROOT" "$BUS" "$1"
-    [[ -e "$device" ]]
+SCAN="$(i2cdetect -y "$BUS")"
+
+address_exists() {
+    local addr="$1"
+    local hex
+
+    printf -v hex '%02x' "$addr"
+
+    echo "$SCAN" |
+        awk '{
+            for (i = 2; i <= NF; i++)
+                print $i
+        }' |
+        grep -qx "$hex"
 }
 
 RGB_ADDRESSES=()
 
 #
-# DDR5 SPD addresses are normally 0x50..0x57.
-# Kingston Fury RGB controller for the corresponding DIMM is +0x10,
-# i.e. 0x60..0x67.
+# Kingston Fury DDR5:
+# SPD 0x50..0x57
+# RGB controller = SPD + 0x10
 #
 for ((SPD_DEC = 0x50; SPD_DEC <= 0x57; SPD_DEC++)); do
-    if device_path_exists "$SPD_DEC"; then
-        RGB_DEC=$((SPD_DEC + 0x10))
+    RGB_DEC=$((SPD_DEC + 0x10))
 
-        if device_path_exists "$RGB_DEC"; then
-            printf -v SPD_HEX '0x%02x' "$SPD_DEC"
-            printf -v RGB_HEX '0x%02x' "$RGB_DEC"
+    if address_exists "$SPD_DEC" && address_exists "$RGB_DEC"; then
+        printf -v SPD_HEX '0x%02x' "$SPD_DEC"
+        printf -v RGB_HEX '0x%02x' "$RGB_DEC"
 
-            echo "Found DIMM: SPD $SPD_HEX -> RGB $RGB_HEX"
-            RGB_ADDRESSES+=("$RGB_HEX")
-        fi
+        echo "Found DIMM: SPD $SPD_HEX -> RGB $RGB_HEX"
+        RGB_ADDRESSES+=("$RGB_HEX")
     fi
 done
 
 if [[ ${#RGB_ADDRESSES[@]} -eq 0 ]]; then
     echo "ERROR: No Kingston Fury RGB DIMMs found." >&2
+    echo
+    echo "$SCAN"
     exit 1
 fi
 
 echo "Found ${#RGB_ADDRESSES[@]} RGB DIMM(s): ${RGB_ADDRESSES[*]}"
 
 RGB_SEQUENCE=(
-    "0x08 0x53" # Enter configuration mode
-    "0x09 0x00" # Static mode
-    "0x31 0x00" # RGB = black
+    "0x08 0x53"
+    "0x09 0x00"
+    "0x31 0x00"
     "0x32 0x00"
     "0x33 0x00"
-    "0x20 0x64" # Minimum brightness / LEDs off
-    "0x08 0x44" # Apply / leave configuration mode
+    "0x20 0x64"
+    "0x08 0x44"
 )
 
 for ADDR in "${RGB_ADDRESSES[@]}"; do
@@ -90,9 +97,14 @@ for ADDR in "${RGB_ADDRESSES[@]}"; do
     for WRITE in "${RGB_SEQUENCE[@]}"; do
         REGISTER="${WRITE%% *}"
         VALUE="${WRITE##* }"
-        i2cset -y "$BUS" "$ADDR" "$REGISTER" "$VALUE" b
+
+        if ! i2cset -y "$BUS" "$ADDR" "$REGISTER" "$VALUE"; then
+            echo "ERROR: Write failed at $ADDR register $REGISTER" >&2
+            break
+        fi
+
         sleep 0.02
     done
 done
 
-echo "Kingston Fury RGB disabled."
+echo "Kingston Fury RGB configuration complete."
