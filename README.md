@@ -1,2 +1,24 @@
 # unleash-the-fury
 Disable RGB LEDS on Fury RAM sticks in Linux
+
+## Run on every startup with systemd
+
+Use `/home/runner/work/unleash-the-fury/unleash-the-fury/setup-systemd-service.sh` to install a oneshot systemd service that runs your existing LED-disabling command at boot:
+
+```bash
+sudo /home/runner/work/unleash-the-fury/unleash-the-fury/setup-systemd-service.sh '<command to disable the LEDs>'
+```
+
+The script:
+
+- writes the command to `/etc/default/unleash-the-fury`
+- installs a wrapper at `/usr/local/bin/unleash-the-fury-startup`
+- installs and enables `unleash-the-fury.service`
+- restarts the service immediately so you can verify it without rebooting
+
+Useful commands after installation:
+
+```bash
+systemctl status unleash-the-fury.service
+journalctl -u unleash-the-fury.service
+```
