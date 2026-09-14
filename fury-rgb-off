@@ -23,24 +23,26 @@ if [[ -z "$BUS" ]]; then
 fi
 
 if [[ -z "$BUS" ]]; then
-    echo "ERROR: Could not find Intel I801 SMBus."
-    echo "Set BUS manually, for example:"
-    echo "  BUS=4 $0"
+    echo "ERROR: Could not find Intel I801 SMBus." >&2
+    echo "Set BUS manually, for example:" >&2
+    echo "  BUS=4 $0" >&2
     exit 1
 fi
 
 echo "Using i2c-$BUS"
 
-# Get detected addresses from i2cdetect.
-SCAN="$(i2cdetect -y "$BUS")"
+# Probe only the SPD and Fury RGB ranges we use.
+SPD_SCAN="$(i2cdetect -y "$BUS" 0x50 0x57)"
+RGB_SCAN="$(i2cdetect -y "$BUS" 0x60 0x67)"
 
-address_exists() {
-    local addr
-    addr="$(printf '%02x' "$1")"
+scan_contains() {
+    local scan addr
+    scan="$1"
+    addr="$(printf '%02x' "$2")"
 
     # i2cdetect output contains either the hex address or "UU".
     # We only accept explicit detected addresses here.
-    echo "$SCAN" |
+    echo "$scan" |
         awk '{for (i=2; i<=NF; i++) print $i}' |
         grep -qx "$addr"
 }
@@ -53,10 +55,10 @@ RGB_ADDRESSES=()
 # i.e. 0x60..0x67.
 #
 for ((SPD_DEC = 0x50; SPD_DEC <= 0x57; SPD_DEC++)); do
-    if address_exists "$SPD_DEC"; then
+    if scan_contains "$SPD_SCAN" "$SPD_DEC"; then
         RGB_DEC=$((SPD_DEC + 0x10))
 
-        if address_exists "$RGB_DEC"; then
+        if scan_contains "$RGB_SCAN" "$RGB_DEC"; then
             printf -v SPD_HEX '0x%02x' "$SPD_DEC"
             printf -v RGB_HEX '0x%02x' "$RGB_DEC"
 
@@ -67,7 +69,7 @@ for ((SPD_DEC = 0x50; SPD_DEC <= 0x57; SPD_DEC++)); do
 done
 
 if [[ ${#RGB_ADDRESSES[@]} -eq 0 ]]; then
-    echo "ERROR: No Kingston Fury RGB DIMMs found."
+    echo "ERROR: No Kingston Fury RGB DIMMs found." >&2
     exit 1
 fi
 
