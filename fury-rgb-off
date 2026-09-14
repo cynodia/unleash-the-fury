@@ -80,7 +80,8 @@ for ADDR in "${RGB_ADDRESSES[@]}"; do
     echo "Turning off RGB at $ADDR"
 
     for WRITE in "${RGB_SEQUENCE[@]}"; do
-        read -r REGISTER VALUE <<<"$WRITE"
+        REGISTER="${WRITE%% *}"
+        VALUE="${WRITE##* }"
         i2cset -y "$BUS" "$ADDR" "$REGISTER" "$VALUE" b
         sleep 0.02
     done
