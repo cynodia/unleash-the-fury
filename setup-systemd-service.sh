@@ -73,8 +73,6 @@ write_service() {
 [Unit]
 Description=Run the Unleash the Fury startup command
 After=local-fs.target
-Wants=systemd-udev-settle.service
-After=systemd-udev-settle.service
 
 [Service]
 Type=oneshot
@@ -90,7 +88,7 @@ EOF
 enable_service() {
   systemctl daemon-reload
   systemctl enable "${SERVICE_NAME}"
-  systemctl start "${SERVICE_NAME}"
+  systemctl restart "${SERVICE_NAME}"
 }
 
 main() {
