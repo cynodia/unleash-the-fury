@@ -14,7 +14,7 @@ The script:
 - writes the command to `/etc/default/unleash-the-fury`
 - installs a wrapper at `/usr/local/bin/unleash-the-fury-startup`
 - installs and enables `unleash-the-fury.service`
-- restarts the service immediately so you can verify it without rebooting
+- starts the service immediately so you can verify it without rebooting
 
 Useful commands after installation:
 
