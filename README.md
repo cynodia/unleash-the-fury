@@ -19,6 +19,6 @@ The script:
 Useful commands after installation:
 
 ```bash
-systemctl status unleash-the-fury.service
+systemctl is-enabled unleash-the-fury.service
 journalctl -u unleash-the-fury.service
 ```
