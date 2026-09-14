@@ -13,14 +13,22 @@ fi
 
 # Auto-detect SMBus if BUS wasn't explicitly supplied
 if [[ -z "$BUS" ]]; then
-    BUS="$(
+    mapfile -t MATCHING_BUSES < <(
         i2cdetect -l |
         awk '/SMBus I801/ {
             sub(/^i2c-/, "", $1)
             print $1
-            exit
         }'
-    )"
+    )
+
+    if [[ ${#MATCHING_BUSES[@]} -eq 1 ]]; then
+        BUS="${MATCHING_BUSES[0]}"
+    elif [[ ${#MATCHING_BUSES[@]} -gt 1 ]]; then
+        echo "ERROR: Found multiple matching SMBus I801 adapters." >&2
+        echo "Set BUS manually, for example:" >&2
+        echo "  BUS=4 $0" >&2
+        exit 1
+    fi
 fi
 
 if [[ -z "$BUS" ]]; then
