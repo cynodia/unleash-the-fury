@@ -51,6 +51,16 @@ prompt_yes_no() {
   local default_answer="$2"
   local reply
 
+  default_answer="${default_answer,,}"
+  case "${default_answer}" in
+    y|yes) default_answer="y" ;;
+    n|no) default_answer="n" ;;
+    *)
+      echo "Internal error: invalid default answer '${default_answer}'." >&2
+      exit 1
+      ;;
+  esac
+
   if [[ ! -r /dev/tty ]]; then
     echo "A terminal is required for confirmation prompts." >&2
     exit 1
@@ -59,10 +69,11 @@ prompt_yes_no() {
   while true; do
     read -r -p "${prompt} " reply </dev/tty
     reply="${reply:-${default_answer}}"
+    reply="${reply,,}"
 
     case "${reply}" in
-      [Yy]) return 0 ;;
-      [Nn]) return 1 ;;
+      y|yes) return 0 ;;
+      n|no) return 1 ;;
       *)
         echo "Please answer y or n." >&2
         ;;
@@ -133,15 +144,15 @@ main() {
   download_script "${temp_script}"
   chmod 0755 "${temp_script}"
 
-  if prompt_yes_no "Run fury-rgb-off once now before installing the service? [Y/n]" "Y"; then
+  if prompt_yes_no "Run fury-rgb-off once now before installing the service? [Y/n]" "y"; then
     if ! run_test "${temp_script}"; then
       echo "The test run failed." >&2
-      if ! prompt_yes_no "Install the service anyway? [y/N]" "N"; then
+      if ! prompt_yes_no "Install the service anyway? [y/N]" "n"; then
         echo "Installation cancelled."
         exit 1
       fi
     fi
-  elif ! prompt_yes_no "Install the service without a test run? [y/N]" "N"; then
+  elif ! prompt_yes_no "Install the service without a test run? [y/N]" "n"; then
     echo "Installation cancelled."
     exit 1
   fi
