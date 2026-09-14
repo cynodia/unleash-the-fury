@@ -13,7 +13,7 @@ The script:
 
 - writes the command path and arguments to `/usr/local/bin/unleash-the-fury-command`
 - installs and enables `unleash-the-fury.service`
-- starts the service immediately on first install and restarts it on later updates
+- starts the service immediately on first install and starts it again on later updates
 
 Useful commands after installation:
 
