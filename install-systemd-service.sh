@@ -7,6 +7,16 @@ COMMAND_SCRIPT_PATH="/usr/local/bin/unleash-the-fury-command"
 INSTALL_PATH="/usr/local/bin/fury-rgb-off"
 REPO_REF="${REPO_REF:-main}"
 SCRIPT_URL="https://raw.githubusercontent.com/cynodia/unleash-the-fury/${REPO_REF}/fury-rgb-off"
+BUS="${BUS:-}"
+
+usage() {
+  cat <<'EOF'
+Usage: install-systemd-service.sh [--bus <number>]
+
+Downloads fury-rgb-off, optionally runs it once as a test, and installs/enables
+the unleash-the-fury systemd service.
+EOF
+}
 
 require_root() {
   if [[ "${EUID}" -ne 0 ]]; then
@@ -62,8 +72,9 @@ prompt_yes_no() {
   esac
 
   if [[ ! -r /dev/tty ]]; then
-    echo "A terminal is required for confirmation prompts." >&2
-    exit 1
+    echo "No TTY detected; using default answer '${default_answer}' for: ${prompt}"
+    [[ "${default_answer}" == "y" ]]
+    return
   fi
 
   while true; do
@@ -132,6 +143,27 @@ enable_service() {
 }
 
 main() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --bus)
+        if [[ $# -lt 2 || -z "${2}" ]]; then
+          echo "--bus requires a value." >&2
+          exit 1
+        fi
+        BUS="$2"
+        shift 2
+        ;;
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      *)
+        usage >&2
+        exit 1
+        ;;
+    esac
+  done
+
   require_root
   require_systemd
   require_i2c_tools
