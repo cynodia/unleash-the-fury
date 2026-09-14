@@ -77,7 +77,6 @@ After=local-fs.target
 [Service]
 Type=oneshot
 ExecStart=${WRAPPER_PATH}
-RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -89,7 +88,6 @@ EOF
 enable_service() {
   systemctl daemon-reload
   systemctl enable "${SERVICE_NAME}"
-  systemctl stop "${SERVICE_NAME}" >/dev/null 2>&1 || true
   systemctl start "${SERVICE_NAME}"
 }
 
