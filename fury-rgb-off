@@ -4,6 +4,7 @@ set -euo pipefail
 # Can be overridden, e.g.:
 #   BUS=4 ./fury-rgb-off
 BUS="${BUS:-}"
+SYSFS_I2C_DEVICES_ROOT="${SYSFS_I2C_DEVICES_ROOT:-/sys/bus/i2c/devices}"
 
 if ! command -v i2cdetect >/dev/null 2>&1 || ! command -v i2cset >/dev/null 2>&1; then
     echo "ERROR: i2c-tools is required (missing i2cdetect and/or i2cset)." >&2
@@ -31,20 +32,10 @@ fi
 
 echo "Using i2c-$BUS"
 
-# Probe only the SPD and Fury RGB ranges we use, in read-only mode.
-SPD_SCAN="$(i2cdetect -y -r -a "$BUS" 0x50 0x57)"
-RGB_SCAN="$(i2cdetect -y -r -a "$BUS" 0x60 0x67)"
-
-scan_contains() {
-    local scan addr
-    scan="$1"
-    addr="$(printf '%02x' "$2")"
-
-    # i2cdetect output contains either the hex address or "UU".
-    # We only accept explicit detected addresses here.
-    echo "$scan" |
-        awk '{for (i=2; i<=NF; i++) print $i}' |
-        grep -qx "$addr"
+device_path_exists() {
+    local device
+    printf -v device '%s/%s-%04x' "$SYSFS_I2C_DEVICES_ROOT" "$BUS" "$1"
+    [[ -e "$device" ]]
 }
 
 RGB_ADDRESSES=()
@@ -55,10 +46,10 @@ RGB_ADDRESSES=()
 # i.e. 0x60..0x67.
 #
 for ((SPD_DEC = 0x50; SPD_DEC <= 0x57; SPD_DEC++)); do
-    if scan_contains "$SPD_SCAN" "$SPD_DEC"; then
+    if device_path_exists "$SPD_DEC"; then
         RGB_DEC=$((SPD_DEC + 0x10))
 
-        if scan_contains "$RGB_SCAN" "$RGB_DEC"; then
+        if device_path_exists "$RGB_DEC"; then
             printf -v SPD_HEX '0x%02x' "$SPD_DEC"
             printf -v RGB_HEX '0x%02x' "$RGB_DEC"
 
