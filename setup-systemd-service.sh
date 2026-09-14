@@ -75,6 +75,7 @@ After=local-fs.target
 [Service]
 Type=oneshot
 ExecStart=${COMMAND_SCRIPT_PATH}
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
@@ -87,7 +88,7 @@ enable_service() {
   systemctl daemon-reload
 
   if systemctl is-enabled --quiet "${SERVICE_NAME}" >/dev/null 2>&1; then
-    systemctl start "${SERVICE_NAME}"
+    systemctl restart "${SERVICE_NAME}"
   else
     systemctl enable --now "${SERVICE_NAME}"
   fi
