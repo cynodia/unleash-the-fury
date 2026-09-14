@@ -36,6 +36,27 @@ If your system exposes multiple matching `SMBus I801` adapters, the script will 
 
 The script prints each detected DIMM/RGB address pair and then disables RGB on each matching stick.
 
+## Run on every startup with systemd
+
+From the repository root, use `./setup-systemd-service.sh` to install a oneshot systemd service that runs your existing LED-disabling command or script at boot:
+
+```bash
+sudo ./setup-systemd-service.sh /path/to/disable-leds [args...]
+```
+
+The script:
+
+- writes the command path and arguments to `/usr/local/bin/unleash-the-fury-command`
+- installs and enables `unleash-the-fury.service`
+- starts the service immediately on first install and restarts it on later updates
+
+Useful commands after installation:
+
+```bash
+systemctl is-enabled unleash-the-fury.service
+journalctl -u unleash-the-fury.service
+```
+
 ## Safety note
 
 This script writes directly to SMBus/I²C device registers after matching sysfs-exposed SPD/RGB device addresses on the selected bus. Use it only if you understand the risks and have confirmed the detected bus is correct for your system.
