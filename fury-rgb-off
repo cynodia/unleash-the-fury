@@ -24,7 +24,7 @@ if [[ -z "$BUS" ]]; then
 fi
 
 if [[ -z "$BUS" ]]; then
-    echo "ERROR: Could not find Intel I801 SMBus." >&2
+    echo "ERROR: Could not find a matching SMBus I801 adapter." >&2
     echo "Set BUS manually, for example:" >&2
     echo "  BUS=4 $0" >&2
     exit 1
