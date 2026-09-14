@@ -7,11 +7,11 @@ COMMAND_SCRIPT_PATH="/usr/local/bin/unleash-the-fury-command"
 
 usage() {
   cat <<'EOF'
-Usage: sudo ./setup-systemd-service.sh '<command to run at startup>'
+Usage: sudo ./setup-systemd-service.sh <command> [args...]
 
 Installs and enables a oneshot systemd service named unleash-the-fury.service.
-The provided command is written into /usr/local/bin/unleash-the-fury-command
-and executed on every boot.
+The provided command path and literal arguments are written into
+/usr/local/bin/unleash-the-fury-command and executed on every boot.
 EOF
 }
 
@@ -29,19 +29,38 @@ require_systemd() {
   fi
 }
 
-write_command_script() {
-  local command_string="$1"
+validate_command() {
+  if [[ "$1" == */* ]]; then
+    if ! command -v realpath >/dev/null 2>&1; then
+      echo "realpath is required when using a command path." >&2
+      exit 1
+    fi
 
-  if [[ "${command_string}" == *$'\n'* ]]; then
-    echo "The startup command must be a single line." >&2
-    exit 1
+    if [[ ! -x "$1" ]]; then
+      echo "Command is not executable: $1" >&2
+      exit 1
+    fi
+
+    realpath "$1"
+    return
   fi
+
+  command -v -- "$1" 2>/dev/null || {
+    echo "Command not found: $1" >&2
+    exit 1
+  }
+}
+
+write_command_script() {
+  local quoted_args
+
+  quoted_args="$(printf ' %q' "$@")"
 
   cat > "${COMMAND_SCRIPT_PATH}" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
-${command_string}
+exec${quoted_args}
 EOF
 
   chmod 0755 "${COMMAND_SCRIPT_PATH}"
@@ -80,22 +99,25 @@ main() {
     exit 0
   fi
 
-  if [[ $# -ne 1 ]]; then
+  if [[ $# -lt 1 ]]; then
     usage
     exit 1
   fi
 
   require_root
   require_systemd
+  local resolved_command
+  resolved_command="$(validate_command "$1")"
 
-  local command_string="$1"
-
-  write_command_script "${command_string}"
+  shift
+  write_command_script "${resolved_command}" "$@"
   write_service
   enable_service
 
   echo "Installed ${SERVICE_NAME}."
-  echo "Command: ${command_string}"
+  printf 'Command:'
+  printf ' %q' "${resolved_command}" "$@"
+  printf '\n'
   echo "Service file: ${SERVICE_PATH}"
   echo "Command script: ${COMMAND_SCRIPT_PATH}"
 }
