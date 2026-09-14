@@ -6,7 +6,7 @@ Disable the RGB LEDs on Kingston Fury RAM sticks under Linux.
 
 The `fury-rgb-off` script:
 
-- auto-detects the Intel I801 SMBus when possible
+- auto-detects a matching `SMBus I801` adapter string when possible
 - checks DDR5 SPD device nodes (`0x50`-`0x57`) exposed via `/sys/bus/i2c/devices`
 - maps detected Fury RGB controller addresses (`0x60`-`0x67`)
 - writes the values needed to switch the LEDs to black/off
