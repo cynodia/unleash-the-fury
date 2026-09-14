@@ -77,9 +77,6 @@ RGB_SEQUENCE=(
 )
 
 for ADDR in "${RGB_ADDRESSES[@]}"; do
-    REGISTER=
-    VALUE=
-
     echo "Turning off RGB at $ADDR"
 
     for WRITE in "${RGB_SEQUENCE[@]}"; do
