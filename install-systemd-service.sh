@@ -98,6 +98,8 @@ run_test() {
   echo "Running a one-time test with ${script_path}..."
   if [[ -n "${BUS:-}" ]]; then
     echo "Using BUS=${BUS} for the test and installed service."
+    BUS="${BUS}" "${script_path}"
+    return
   fi
 
   "${script_path}"
