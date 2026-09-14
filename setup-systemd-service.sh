@@ -62,7 +62,7 @@ if [[ -z "${UNLEASH_THE_FURY_COMMAND:-}" ]]; then
   exit 1
 fi
 
-exec /bin/sh -lc "${UNLEASH_THE_FURY_COMMAND}"
+exec /usr/bin/env bash -lc "${UNLEASH_THE_FURY_COMMAND}"
 EOF
 
   chmod 0755 "${WRAPPER_PATH}"
