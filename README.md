@@ -17,7 +17,7 @@ wget -qO- https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/instal
 If your system needs a manual SMBus selection, pass `BUS` into the installer so the same value is used for both the test run and the installed service:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/install-systemd-service.sh | sudo BUS=4 bash
+curl -fsSL https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/install-systemd-service.sh | sudo env BUS=4 bash -s
 ```
 
 ## What it does
