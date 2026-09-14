@@ -31,9 +31,9 @@ fi
 
 echo "Using i2c-$BUS"
 
-# Probe only the SPD and Fury RGB ranges we use.
-SPD_SCAN="$(i2cdetect -y -a "$BUS" 0x50 0x57)"
-RGB_SCAN="$(i2cdetect -y -a "$BUS" 0x60 0x67)"
+# Probe only the SPD and Fury RGB ranges we use, in read-only mode.
+SPD_SCAN="$(i2cdetect -y -r -a "$BUS" 0x50 0x57)"
+RGB_SCAN="$(i2cdetect -y -r -a "$BUS" 0x60 0x67)"
 
 scan_contains() {
     local scan addr
