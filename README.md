@@ -2,6 +2,24 @@
 
 Disable the RGB LEDs on Kingston Fury RAM sticks under Linux.
 
+## Quick install
+
+The installer downloads the latest `fury-rgb-off` script, asks whether you want to run a one-time test first, and then installs/enables the systemd service.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/install-systemd-service.sh | sudo bash
+```
+
+```bash
+wget -qO- https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/install-systemd-service.sh | sudo bash
+```
+
+If your system needs a manual SMBus selection, pass `BUS` into the installer so the same value is used for both the test run and the installed service:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cynodia/unleash-the-fury/main/install-systemd-service.sh | sudo bash -s -- --bus 4
+```
+
 ## What it does
 
 The `fury-rgb-off` script:
@@ -38,13 +56,17 @@ The script prints each detected DIMM/RGB address pair and then disables RGB on e
 
 ## Run on every startup with systemd
 
-From the repository root, use `./setup-systemd-service.sh` to install a oneshot systemd service that runs your existing LED-disabling command or script at boot:
+For the simplest path, use the quick-install command above.
+
+If you already have a local checkout and want to install the service manually from the repository root, use `./setup-systemd-service.sh` to install a oneshot systemd service that runs your existing LED-disabling command or script at boot:
 
 ```bash
 sudo ./setup-systemd-service.sh /path/to/disable-leds [args...]
 ```
 
-The script:
+The repository also includes `./install-systemd-service.sh` if you want the local installer that downloads `fury-rgb-off`, offers a one-time test run, and then installs the service.
+
+The manual setup script:
 
 - writes the command path and arguments to `/usr/local/bin/unleash-the-fury-command`
 - installs and enables `unleash-the-fury.service`
