@@ -89,7 +89,12 @@ EOF
 enable_service() {
   systemctl daemon-reload
   systemctl enable "${SERVICE_NAME}"
-  systemctl restart "${SERVICE_NAME}"
+
+  if systemctl is-active --quiet "${SERVICE_NAME}"; then
+    systemctl restart "${SERVICE_NAME}"
+  else
+    systemctl start "${SERVICE_NAME}"
+  fi
 }
 
 main() {
