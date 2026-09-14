@@ -62,7 +62,7 @@ if [[ -z "${UNLEASH_THE_FURY_COMMAND:-}" ]]; then
   exit 1
 fi
 
-exec /usr/bin/env bash -lc "${UNLEASH_THE_FURY_COMMAND}"
+exec /usr/bin/env bash -c "${UNLEASH_THE_FURY_COMMAND}"
 EOF
 
   chmod 0755 "${WRAPPER_PATH}"
@@ -97,7 +97,7 @@ main() {
     exit 0
   fi
 
-  if [[ $# -lt 1 ]]; then
+  if [[ $# -ne 1 ]]; then
     usage
     exit 1
   fi
@@ -105,7 +105,7 @@ main() {
   require_root
   require_systemd
 
-  local command_string="$*"
+  local command_string="$1"
 
   write_env_file "${command_string}"
   write_wrapper
