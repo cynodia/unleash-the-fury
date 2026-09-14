@@ -11,10 +11,9 @@ sudo ./setup-systemd-service.sh '<command to disable the LEDs>'
 
 The script:
 
-- writes the command to `/etc/unleash-the-fury.command`
-- installs a wrapper at `/usr/local/bin/unleash-the-fury-startup`
+- writes the command to `/usr/local/bin/unleash-the-fury-command`
 - installs and enables `unleash-the-fury.service`
-- starts the service immediately so you can verify it without rebooting
+- starts the service immediately on first install and restarts it on later updates
 
 Useful commands after installation:
 
