@@ -4,25 +4,42 @@ set -uo pipefail
 #
 # Kingston Fury DDR5 RGB off
 #
-# Auto-detects the I2C/SMBus and DIMM addresses.
+# Automatically detects the system SMBus and Kingston Fury DIMMs.
 #
-# Expected address relationship:
+# Kingston Fury DDR5 address relationship:
 #
 #   SPD 0x50 -> RGB 0x60
 #   SPD 0x51 -> RGB 0x61
 #   ...
 #   SPD 0x57 -> RGB 0x67
 #
+# Requires: i2c-tools
+#
 
-if ! command -v i2cdetect >/dev/null 2>&1 ||
-   ! command -v i2cset >/dev/null 2>&1; then
-    echo "ERROR: i2c-tools is required." >&2
+# ------------------------------------------------------------
+# Requirements
+# ------------------------------------------------------------
+
+for CMD in i2cdetect i2cset; do
+    if ! command -v "$CMD" >/dev/null 2>&1; then
+        echo "ERROR: $CMD not found. Install i2c-tools." >&2
+        exit 1
+    fi
+done
+
+
+# ------------------------------------------------------------
+# Must run as root
+# ------------------------------------------------------------
+
+if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: This script must be run as root." >&2
     exit 1
 fi
 
 
 # ------------------------------------------------------------
-# Check whether an address appears in an i2cdetect scan.
+# Check whether an address occurs in an i2cdetect scan
 # ------------------------------------------------------------
 
 address_exists() {
@@ -42,12 +59,19 @@ address_exists() {
 
 
 # ------------------------------------------------------------
-# Find all available I2C buses.
+# Find SMBus adapters only
+#
+# Example:
+#
+# i2c-3  smbus  SMBus I801 adapter at 0000:00:1f.4
+#
+# This deliberately ignores ordinary I2C adapters such as
+# GPU DDC, DisplayPort AUX and DesignWare buses.
 # ------------------------------------------------------------
 
-mapfile -t BUSES < <(
+mapfile -t SMBUS_BUSES < <(
     i2cdetect -l |
-        awk '{
+        awk '$2 == "smbus" {
             bus=$1
             sub(/^i2c-/, "", bus)
 
@@ -56,29 +80,43 @@ mapfile -t BUSES < <(
         }'
 )
 
-if [[ ${#BUSES[@]} -eq 0 ]]; then
-    echo "ERROR: No I2C buses found." >&2
+if [[ ${#SMBUS_BUSES[@]} -eq 0 ]]; then
+    echo "ERROR: No SMBus adapters found." >&2
     exit 1
 fi
 
-echo "Found I2C buses: ${BUSES[*]}"
+echo "Found SMBus adapter(s):"
+
+for BUS in "${SMBUS_BUSES[@]}"; do
+    DESCRIPTION="$(
+        i2cdetect -l |
+        awk -v target="i2c-$BUS" '$1 == target {
+            $1=""
+            $2=""
+            sub(/^[ \t]+/, "")
+            print
+        }'
+    )"
+
+    echo "  i2c-$BUS: $DESCRIPTION"
+done
+
 echo
 
 
 # ------------------------------------------------------------
-# Search all buses for matching SPD + RGB addresses.
+# Search SMBus adapters for Fury DIMMs
 # ------------------------------------------------------------
 
 FOUND_BUS=""
 RGB_ADDRESSES=()
 
-for BUS in "${BUSES[@]}"; do
+for BUS in "${SMBUS_BUSES[@]}"; do
 
     echo "Scanning i2c-$BUS..."
 
-    # Some buses (GPU, AUX etc.) may not support probing.
     if ! SCAN="$(i2cdetect -y "$BUS" 2>/dev/null)"; then
-        echo "  Cannot scan i2c-$BUS, skipping."
+        echo "  Unable to scan i2c-$BUS; skipping."
         continue
     fi
 
@@ -104,8 +142,8 @@ for BUS in "${BUSES[@]}"; do
 
         if [[ -n "$FOUND_BUS" ]]; then
             echo
-            echo "ERROR: Fury-like DIMMs found on multiple I2C buses." >&2
-            echo "Refusing to guess which bus to use." >&2
+            echo "ERROR: Fury-like DIMMs found on multiple SMBus adapters." >&2
+            echo "Refusing to choose a bus automatically." >&2
             exit 1
         fi
 
@@ -117,7 +155,7 @@ done
 
 
 # ------------------------------------------------------------
-# Validate result.
+# Validate detection
 # ------------------------------------------------------------
 
 if [[ -z "$FOUND_BUS" ]]; then
@@ -135,7 +173,7 @@ echo
 
 
 # ------------------------------------------------------------
-# Kingston Fury RGB command sequence.
+# Kingston Fury RGB command sequence
 # ------------------------------------------------------------
 
 RGB_SEQUENCE=(
@@ -153,7 +191,7 @@ RGB_SEQUENCE=(
 
 
 # ------------------------------------------------------------
-# Disable RGB.
+# Disable RGB
 # ------------------------------------------------------------
 
 FAILURES=0
@@ -171,9 +209,7 @@ for ADDR in "${RGB_ADDRESSES[@]}"; do
 
         if ! i2cset -y "$BUS" "$ADDR" "$REGISTER" "$VALUE"; then
 
-            echo \
-                "ERROR: Write failed: $ADDR $REGISTER $VALUE" \
-                >&2
+            echo "ERROR: Write failed: $ADDR $REGISTER $VALUE" >&2
 
             DIMM_FAILED=1
             FAILURES=$((FAILURES + 1))
